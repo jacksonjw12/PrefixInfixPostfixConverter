@@ -1,0 +1,343 @@
+<html>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+
+	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<style>
+.textInputFullWidth {
+	width:1000px!;
+}
+
+#formContainer {
+	margin:30px;
+	width:50%;
+}
+.no-gutter > [class*='col-'] {
+    padding-right:0;
+    padding-left:0;
+}
+
+input[readonly].default-cursor {
+    cursor: default;
+}
+	
+	
+
+</style>
+
+<script>
+
+function inputTypeChange(){
+	var inputSelector = document.getElementById("inputType");
+	var outputSelector = document.getElementById("outputType");
+
+	var i = inputSelector.options[inputSelector.selectedIndex].text;
+	if(i == "Prefix"){
+		outputSelector.options[0].text = "Infix";
+		outputSelector.options[1].text = "Postfix";
+
+	}
+	else if(i == "Infix"){
+		outputSelector.options[0].text = "Prefix";
+		outputSelector.options[1].text = "Postfix";
+
+	}
+	else{//Postfix
+		outputSelector.options[0].text = "Prefix";
+		outputSelector.options[1].text = "Infix";
+	}
+}
+
+function equationFromString(str){
+	var equation = str.split(" ");
+	for(var i = 0; i< equation.length; i++){
+		if(equation[i] == "" || equation[i] == " "){
+			equation.splice(i,1);
+			i--;
+		}
+	}
+	return equation;
+}
+
+function computeMain(){
+	var inputSelector = document.getElementById("inputType");
+	var outputSelector = document.getElementById("outputType");
+
+	var inputType = inputSelector.options[inputSelector.selectedIndex].text;
+	var outputType = outputSelector.options[outputSelector.selectedIndex].text;
+	var eq = document.getElementById("equation").value;
+	//console.log(eq)
+	var equation = equationFromString(eq);
+
+	console.log(equation)
+	if(inputType == "Infix"){
+		if(outputType == "Postfix"){
+			document.getElementById("output").value = infixToPostfix(equation);
+		}
+		else{//Prefix
+			var temp = infixToPostfix(equation);
+			equation = equationFromString(temp);
+			document.getElementById("output").value = postfixToPrefix(equation);
+
+		}
+	}
+	else if(inputType == "Prefix"){
+		if(outputType == "Infix"){
+			document.getElementById("output").value = prefixToInfix(equation);
+		}
+		else{//postfix
+			var temp = prefixToInfix(equation);
+			equation = equationFromString(temp);
+			document.getElementById("output").value = infixToPostfix(equation);
+
+		}
+	}
+	else if(inputType == "Postfix"){
+		if(outputType == "Prefix"){
+			document.getElementById("output").value = postfixToPrefix(equation);
+		}
+		else{//infix
+			var temp = postfixToPrefix(equation);
+			equation = equationFromString(temp);
+			document.getElementById("output").value = prefixToInfix(equation);
+
+		}
+	}
+
+	
+
+	//document.getElementById("output").value = infixToPostfix(equation);//infixToPostfix(equation)
+}
+
+//Triangle! infix -> postfix -> prefix -> infix -> ...
+
+function infixToPostfix(equation){
+	var out = "";
+	var s = new Stack();
+	for(var i = 0; i<equation.length; i++){
+		console.log(s.elements);
+		if(elementType(equation[i]) == "operator"){
+			if(equation[i] == ")"){
+				console.log(s.top())
+				while(s.top() != "("){
+					out = out + s.pop() + " ";
+				}
+				s.pop();
+			}
+			else{
+				while(equation[i] != "(" && precedence(equation[i]) <= precedence(s.top())){
+					out = out + s.pop() + " "
+				}
+				s.push(equation[i])
+
+			}
+		}
+			
+		
+		else{
+			out = out + equation[i] + " ";
+		}
+	}
+	while(!s.empty()){
+		out = out + s.pop() + " "
+	}
+	return out;
+}
+
+function postfixToPrefix(equation){
+	var s = new Stack();
+	for(var i = 0; i<equation.length; i++){
+
+		if(elementType(equation[i]) == "operand"){
+			s.push(equation[i])// + " "
+		}
+		else{
+
+			var temp = s.pop();
+			temp = equation[i] + " " + s.pop() + " " + temp;
+			s.push(temp);
+
+		}
+
+	}
+
+	return s.pop();
+}
+
+function prefixToInfix(equation){
+	equation.reverse();
+	var s = new Stack();
+	for(var i = 0; i < equation.length; i++){
+		if(elementType(equation[i]) == "operand"){
+			s.push(equation[i])
+		}
+		else{
+			var temp = equation[i] + " " + s.pop() + " ";
+			temp = " ( " +s.pop() + " " + temp + ") ";
+			s.push(temp);
+		}
+
+	}
+	return s.pop();
+}
+
+
+
+function Stack(){
+	this.elements = [];
+	this.size = 0;
+	this.push = function(e){
+		this.elements.push(e);
+		this.size++;
+	}
+	this.pop = function(){
+		if(this.size == 0){
+			return "";
+		}
+		this.size--;
+		return this.elements.pop();
+		
+	}
+	this.top = function(){
+		return this.elements[this.size-1];
+	}
+	this.empty = function(){
+		if(this.size  == 0){
+			return true;
+		}
+		return false;
+	}
+	
+}
+
+var operators = ["+","-","*","/","(",")"]
+function elementType(element){
+	if(operators.indexOf(element) < 0){
+		return "operand";
+	}
+	else{
+		return "operator";
+	}
+}
+var precedence = function(op){
+	if(op == "*" || op == "/"){
+		return 3;
+	}
+	else if(op == "+" || op == "-"){
+		return 2;
+	}
+	else{
+		return 1;
+	}
+}
+
+
+
+</script>
+
+<body>
+
+<div id="formContainer">
+  <p class="h1">Prefix-Postfix-Infix Converter</p>
+  <div id="inputHolder">
+		<div class="form-group">
+		  	<div class="row no-gutter">
+		  		<div class="col-md-2">
+		  			<label for="exampleSelect1">Input Type</label>
+		  		</div>
+		  		<div class="col-md-10">
+		    		<label for="exampleInputPassword1"> &nbsp;Equation </label>
+		  		</div>
+
+
+		  	</div>
+		    
+
+			<div class="row no-gutter">
+			    <div class="col-xs-2">
+				    <select class="form-control" id="inputType" onchange="inputTypeChange()">
+				      <option>Prefix</option>
+				      <option>Infix</option>
+				      <option>Postfix</option>
+
+				    </select>
+				</div>
+
+				<div class="col-xs-10 ">
+			    	<input type="text" class="form-control" id="equation" placeholder="equation" value="(  ( 5 * 4 )  + 3 )">
+			    </div>
+		   </div>
+		   <div class="row">
+
+		   <div class="form-group no-gutter" style="margin-top:10px;">
+		   	
+		   		<button onclick="javascript:computeMain()" type="button"  class="btn btn-primary">Submit</button>
+   				
+
+		   </div>
+		   
+		</div>
+   </div>
+  
+
+
+   <div id="outputHolder">
+		  <div class="form-group">
+		  	<div class="row no-gutter">
+		  		<div class="col-md-2">
+		  			<label for="exampleSelect1">Output Type</label>
+		  		</div>
+		  		<div class="col-md-10">
+		    		<label for="exampleInputPassword1"> &nbsp;Output </label>
+		  		</div>
+
+
+		  	</div>
+		    
+
+			<div class="row no-gutter">
+			    <div class="col-xs-2">
+				    <select class="form-control" id="outputType">
+				      <option>Infix</option>
+				      <option>Postfix</option>
+				    </select>
+				</div>
+
+				<div class="col-xs-10 ">
+			    	<input type="text" class="form-control default-cursor" id="output" placeholder="equation" readonly>
+			    </div>
+		   </div>
+
+   </div>
+
+
+   <div>
+
+    <h3>Usage</h3>
+    <h4> -Make sure to seperate each element of the equation with a space 
+    </br>
+	-ex:  <small class="text-muted"> 3 4 +</small>
+
+	</h4>
+
+   </div>
+
+
+
+
+   
+    
+     
+    </div>
+
+  </div>
+  
+  
+</div>
+
+</body>
+
+
+</html>
