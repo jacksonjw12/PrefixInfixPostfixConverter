@@ -76,10 +76,16 @@ function computeMain(){
 		if(outputType == "Postfix"){
 			document.getElementById("output").value = infixToPostfix(equation);
 		}
-		else{//Prefix
+		else if(outputType == "Prefix"){//Prefix
 			var temp = infixToPostfix(equation);
 			equation = equationFromString(temp);
 			document.getElementById("output").value = postfixToPrefix(equation);
+
+		}
+		else{//eval
+			var temp = infixToPostfix(equation)
+			equation = equationFromString(temp)
+			document.getElementById("output").value = evaluatePostfix(equation);
 
 		}
 	}
@@ -87,22 +93,32 @@ function computeMain(){
 		if(outputType == "Infix"){
 			document.getElementById("output").value = prefixToInfix(equation);
 		}
-		else{//postfix
+		else if(outputType == "Postfix"){//postfix
 			var temp = prefixToInfix(equation);
 			equation = equationFromString(temp);
 			document.getElementById("output").value = infixToPostfix(equation);
 
+		}
+		else{//eval
+			var temp = prefixToInfix(equation);
+			equation = equationFromString(temp);
+			temp = infixToPostfix(equation)
+			equation = equationFromString(temp)
+			document.getElementById("output").value = evaluatePostfix(equation);
 		}
 	}
 	else if(inputType == "Postfix"){
 		if(outputType == "Prefix"){
 			document.getElementById("output").value = postfixToPrefix(equation);
 		}
-		else{//infix
+		else if(outputType == "Infix"){//infix
 			var temp = postfixToPrefix(equation);
 			equation = equationFromString(temp);
 			document.getElementById("output").value = prefixToInfix(equation);
 
+		}
+		else{//eval
+			document.getElementById("output").value = evaluatePostfix(equation);
 		}
 	}
 
@@ -111,16 +127,36 @@ function computeMain(){
 	//document.getElementById("output").value = infixToPostfix(equation);//infixToPostfix(equation)
 }
 
+//( ( ( 30 / 6 / 2 ) + 1 ) + ( 5 - 40 / 8 ) * ( 2 + 3 ) )
+//30 6 / 2 / 1 + 5 40 8 / - 2 3 + * + 
+
+function evaluatePostfix(equation){
+	var s = new Stack();
+	for(var i = 0; i<equation.length; i++){
+		if(elementType(equation[i]) == "operator"){
+			var b = s.pop();
+			var a = s.pop();
+			var c = eval(a + equation[i] + b);
+			s.push(c);
+		}
+		else{
+			s.push(equation[i])
+		}
+
+
+	}
+	return s.pop();
+}
+
+
 //Triangle! infix -> postfix -> prefix -> infix -> ...
 
 function infixToPostfix(equation){
 	var out = "";
 	var s = new Stack();
 	for(var i = 0; i<equation.length; i++){
-		console.log(s.elements);
 		if(elementType(equation[i]) == "operator"){
 			if(equation[i] == ")"){
-				console.log(s.top())
 				while(s.top() != "("){
 					out = out + s.pop() + " ";
 				}
@@ -174,8 +210,9 @@ function prefixToInfix(equation){
 			s.push(equation[i])
 		}
 		else{
-			var temp = equation[i] + " " + s.pop() + " ";
-			temp = " ( " +s.pop() + " " + temp + ") ";
+			//var temp = equation[i] + " " + s.pop() + " ";
+			temp = " ( " +s.pop() + " " + equation[i] + " " + s.pop() + " " + ") ";
+
 			s.push(temp);
 		}
 
@@ -271,9 +308,9 @@ var precedence = function(op){
 		   </div>
 		   <div class="row">
 
-		   <div class="form-group no-gutter" style="margin-top:10px;">
+		   <div class="form-group " style="margin-top:10px;">
 		   	
-		   		<button onclick="javascript:computeMain()" type="button"  class="btn btn-primary">Submit</button>
+		   		<button onclick="javascript:computeMain()" type="button" style="margin-right:50px;"  class="btn btn-primary">Submit</button>
    				
 
 		   </div>
@@ -302,6 +339,7 @@ var precedence = function(op){
 				    <select class="form-control" id="outputType">
 				      <option>Infix</option>
 				      <option>Postfix</option>
+				      <option>Evaluate</option>
 				    </select>
 				</div>
 
