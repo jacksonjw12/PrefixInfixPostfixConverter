@@ -49,15 +49,74 @@ function inputTypeChange(){
 		outputSelector.options[1].text = "Infix";
 	}
 }
+function typeOfChar(fullstring, charIndex){
+	if(parseInt(fullstring.charAt(charIndex)) <= 9){
+		return {"type":"number","size":1}
+	}
+	else{
+		
+		for(var i = 0; i<functions.length; i++){
+			if(fullstring.indexOf(functions[i]) == 0){
+				return {"type":"function","size":functions[i].length}
+			}
+		}
+		for(var i = 0; i<symbols.length; i++){
+			if(fullstring.indexOf(symbols[i]) == 0){
+				return {"type":"symbol","size":symbols[i].length}
+			}
+		}
+		
+		return {"type":"character","size":1}
+	}
+}
 
-function equationFromString(str){
+function equationFromString(str, inputType){
 	var equation = str.split(" ");
 	for(var i = 0; i< equation.length; i++){
 		if(equation[i] == "" || equation[i] == " "){
 			equation.splice(i,1);
 			i--;
 		}
+		else{//check for no spaces between some
+			
+			var type = typeOfChar(equation[i],0);
+			if(equation[i].length > type.size && (type.type != "number") ){
+				//not allowed to have two functions like sinsin, so must treat like diff types
+				var croppedString = equation[i].substring(0,type.size);
+				var newstring = equation[i].substring(type.size);
+				console.log(croppedString);
+				console.log(newstring)
+				equation[i] = croppedString;
+				equation.splice(i+1,0,newstring)
+				if(inputType == "Infix" && type.type != "function" && (operators.indexOf(croppedString) < 0 || croppedString == ")") && (newstring.charAt(0) == "("  || operators.indexOf(newstring.charAt(0))<0)){
+
+					equation.splice(i+1,0,"*")
+				}
+			}
+			for(var j = type.size; j<equation[i].length;j++){
+				var type2 = typeOfChar(equation[i],j);
+				if(type2.type != "number"){
+					var croppedString = equation[i].substring(0,j);
+					var newstring = equation[i].substring(j);
+					console.log(croppedString);
+					console.log(newstring)
+					equation[i] = croppedString;
+					equation.splice(i+1,0,newstring)
+					if(inputType == "Infix" && (newstring.charAt(0) == "("  || operators.indexOf(newstring.charAt(0))<0)){
+
+					 	equation.splice(i+1,0,"*")
+					 }
+
+				}
+
+			}
+			
+
+			
+
+		}
 	}
+
 	return equation;
 }
 
@@ -69,7 +128,7 @@ function computeMain(){
 	var outputType = outputSelector.options[outputSelector.selectedIndex].text;
 	var eq = document.getElementById("equation").value;
 	//console.log(eq)
-	var equation = equationFromString(eq);
+	var equation = equationFromString(eq, inputType);
 
 	console.log(equation)
 	if(inputType == "Infix"){
@@ -78,13 +137,13 @@ function computeMain(){
 		}
 		else if(outputType == "Prefix"){//Prefix
 			var temp = infixToPostfix(equation);
-			equation = equationFromString(temp);
+			equation = equationFromString(temp,"Postfix");
 			document.getElementById("output").value = postfixToPrefix(equation);
 
 		}
 		else{//eval
 			var temp = infixToPostfix(equation)
-			equation = equationFromString(temp)
+			equation = equationFromString(temp,"Postfix")
 			document.getElementById("output").value = evaluatePostfix(equation);
 
 		}
@@ -95,15 +154,15 @@ function computeMain(){
 		}
 		else if(outputType == "Postfix"){//postfix
 			var temp = prefixToInfix(equation);
-			equation = equationFromString(temp);
+			equation = equationFromString(temp,"Infix");
 			document.getElementById("output").value = infixToPostfix(equation);
 
 		}
 		else{//eval
 			var temp = prefixToInfix(equation);
-			equation = equationFromString(temp);
+			equation = equationFromString(temp,"Infix");
 			temp = infixToPostfix(equation)
-			equation = equationFromString(temp)
+			equation = equationFromString(temp,"Postfix")
 			document.getElementById("output").value = evaluatePostfix(equation);
 		}
 	}
@@ -113,7 +172,7 @@ function computeMain(){
 		}
 		else if(outputType == "Infix"){//infix
 			var temp = postfixToPrefix(equation);
-			equation = equationFromString(temp);
+			equation = equationFromString(temp,"Prefix");
 			document.getElementById("output").value = prefixToInfix(equation);
 
 		}
@@ -127,25 +186,54 @@ function computeMain(){
 	//document.getElementById("output").value = infixToPostfix(equation);//infixToPostfix(equation)
 }
 
+
+
+
 //( ( ( 30 / 6 / 2 ) + 1 ) + ( 5 - 40 / 8 ) * ( 2 + 3 ) )
 //30 6 / 2 / 1 + 5 40 8 / - 2 3 + * + 
 
 function evaluatePostfix(equation){
+	// console.log("---- equation ----")
+	// console.log(equation)
+	// console.log("------------------")
+
 	var s = new Stack();
 	for(var i = 0; i<equation.length; i++){
 		if(elementType(equation[i]) == "operator"){
 			var b = s.pop();
 			var a = s.pop();
-			var c = eval(a + equation[i] + b);
-			s.push(c);
+			if(equation[i] == "^"){//must convert to Math.pow(a,b)
+				var c = eval("Math.pow(" +a + "," + b + ")");
+				s.push(c);
+			}
+			else{
+				var c = eval(a + equation[i] + b);
+				s.push(c);
+			}
+			
+		}
+		else if(elementType(equation[i]) == "function"){
+			var a = "Math."+equation[i]+"(" + s.pop()  + ")"
+			// console.log("****attempting to evaluate funcion****")
+			// console.log(a)
+			var b = eval(a)
+			// console.log("DONE")
+			s.push(b)
+
 		}
 		else{
-			s.push(equation[i])
+			if(elementType(equation[i]) == "symbol"){
+				s.push(eval("Math." + equation[i].toUpperCase()))
+			}
+			else{
+				s.push(equation[i])
+			}
+			
 		}
 
 
 	}
-	return s.pop();
+	return Math.round(s.pop()*100000)/100000;//round to 5 decimal places
 }
 
 
@@ -163,15 +251,23 @@ function infixToPostfix(equation){
 				s.pop();
 			}
 			else{
-				while(equation[i] != "(" && precedence(equation[i]) <= precedence(s.top())){
+				while(!s.empty() && equation[i] != "(" && precedence(equation[i]) <= precedence(s.top())){
 					out = out + s.pop() + " "
 				}
 				s.push(equation[i])
 
 			}
 		}
+		else if(elementType(equation[i]) == "function"){
 			
-		
+			while( !s.empty() && precedence(equation[i]) <= precedence(s.top())){//functions have precedence 5
+					out = out + s.pop() + " "
+			}
+			s.push(equation[i])
+
+
+		}
+			
 		else{
 			out = out + equation[i] + " ";
 		}
@@ -249,17 +345,32 @@ function Stack(){
 	
 }
 
-var operators = ["+","-","*","/","(",")"]
+var operators = ["+","-","*","/","(",")","^"]
+var functions = ["abs","sin","cos","tan"]
+var symbols = ["pi", "e"]
 function elementType(element){
-	if(operators.indexOf(element) < 0){
-		return "operand";
+	if(operators.indexOf(element)  > -1){
+		return "operator";
+	}
+	else if(functions.indexOf(element)  > -1){
+		return "function";
+	}
+	else if(symbols.indexOf(element)  > -1){
+		return "symbol";
 	}
 	else{
-		return "operator";
+		return "operand";
 	}
 }
 var precedence = function(op){
-	if(op == "*" || op == "/"){
+	//funcions have precedence 5
+	if(elementType(op) == "function"){
+		return 5;
+	}
+	else if( op=="^"){
+		return 4;
+	}
+	else if(op == "*" || op == "/"){
 		return 3;
 	}
 	else if(op == "+" || op == "-"){
@@ -295,15 +406,15 @@ var precedence = function(op){
 			<div class="row no-gutter">
 			    <div class="col-xs-2">
 				    <select class="form-control" id="inputType" onchange="inputTypeChange()">
-				      <option>Prefix</option>
 				      <option>Infix</option>
+				      <option>Prefix</option>
 				      <option>Postfix</option>
 
 				    </select>
 				</div>
 
 				<div class="col-xs-10 ">
-			    	<input type="text" class="form-control" id="equation" placeholder="equation" value="(  ( 5 * 4 )  + 3 )">
+			    	<input type="text" class="form-control" id="equation" placeholder="equation" value="">
 			    </div>
 		   </div>
 		   <div class="row">
@@ -337,8 +448,8 @@ var precedence = function(op){
 			<div class="row no-gutter">
 			    <div class="col-xs-2">
 				    <select class="form-control" id="outputType">
-				      <option>Infix</option>
 				      <option>Postfix</option>
+				      <option>Prefix</option>
 				      <option>Evaluate</option>
 				    </select>
 				</div>
@@ -353,14 +464,14 @@ var precedence = function(op){
 
    <div>
 
-    <h3>Usage</h3>
+    <!-- <h3>Usage</h3>
     <h4> -Make sure to seperate each element of the equation with a space 
     </br>
 	-ex:  <small class="text-muted"> 3 4 +</small>
 
 	</h4>
 
-   </div>
+   </div> -->
 
 
 
